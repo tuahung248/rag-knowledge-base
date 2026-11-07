@@ -30,15 +30,6 @@ st.set_page_config(
 # --- Sidebar ---
 with st.sidebar:
     st.title("🤖 AI Engineering KB")
-    user_gemini_key = st.text_input(
-        "Your Gemini API key:",
-        type="password",
-        key="user_gemini_key",
-        help="Free at aistudio.google.com. Used only for this session; not stored.",
-    )
-    if not user_gemini_key:
-        st.info("Enter your Gemini API key to start. Free at aistudio.google.com.")
-        st.stop()
     st.markdown(
         """
         A RAG-powered Q&A bot over AI engineering concepts.
@@ -80,6 +71,14 @@ question = st.text_input(
     key="question_input",
 )
 
+# Visitor's own Gemini key: only needed when asking a question
+user_gemini_key = st.text_input(
+    "Your Gemini API key (needed to ask):",
+    type="password",
+    key="user_gemini_key",
+    help="Free at aistudio.google.com. Used only for this request; not stored.",
+)
+
 # Submit
 col1, col2 = st.columns([1, 5])
 with col1:
@@ -88,7 +87,9 @@ with col2:
     st.empty()
 
 # --- Answer ---
-if submit and question.strip():
+if submit and not user_gemini_key.strip():
+    st.warning("Enter your Gemini API key above to ask a question. Free at aistudio.google.com.")
+elif submit and question.strip():
     with st.spinner("Retrieving and generating..."):
         try:
             answer, source_docs = ask_with_sources(
