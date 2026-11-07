@@ -51,6 +51,10 @@ def main():
     chunks = splitter.split_documents(docs)
     print(f"Split into {len(chunks)} chunks")
 
+    # --- Clear existing rows so reruns don't duplicate ---
+    supabase.table("documents").delete().gte("id", 0).execute()
+    print("Cleared existing rows in documents")
+
     # --- Upsert to Supabase ---
     print("Embedding + upserting to Supabase...")
     vector_store = SupabaseVectorStore.from_documents(
