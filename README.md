@@ -4,6 +4,11 @@ A retrieval-augmented Q&A app over AI engineering concepts. Ask a question, and 
 
 Covers RAG, embeddings and vector search, prompt engineering, RAG evaluation, LLMOps and observability, and AI agents.
 
+**Live demo:** [rag-knowledge-base-cpn5tqzb9fzsprlkd3rydr.streamlit.app](https://rag-knowledge-base-cpn5tqzb9fzsprlkd3rydr.streamlit.app)
+
+> [!NOTE]
+> To ask questions in the demo, enter your own Gemini API key. A free key is available at [aistudio.google.com](https://aistudio.google.com/).
+
 ## Features
 
 - Document ingestion: chunks text files, embeds them with Voyage AI, and stores them in Supabase pgvector.
