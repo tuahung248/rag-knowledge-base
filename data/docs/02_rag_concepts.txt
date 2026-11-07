@@ -1,0 +1,71 @@
+Retrieval-Augmented Generation (RAG): Architecture and Concepts
+
+Retrieval-Augmented Generation (RAG) is a technique that enhances large language model (LLM) outputs by grounding them in relevant documents retrieved from an external knowledge base. Rather than relying solely on knowledge baked into model weights during training, RAG fetches up-to-date, specific information at query time.
+
+THE PROBLEM RAG SOLVES
+
+LLMs have two key limitations: a training data cutoff (they don't know about recent events), and finite context (they can't hold all knowledge in a single prompt). RAG addresses both. It allows models to answer questions about proprietary data, recent information, and large document corpora without retraining or fine-tuning.
+
+RAG ARCHITECTURE: THE THREE COMPONENTS
+
+1. Indexing (Offline)
+Before queries arrive, documents are preprocessed and stored in a vector database. The pipeline is:
+- Load: ingest raw documents (PDFs, text files, web pages, database records)
+- Chunk: split documents into smaller segments (typically 300-1000 tokens) with overlap
+- Embed: convert each chunk to a dense vector using an embedding model
+- Store: upsert vectors and metadata into a vector database (Pinecone, Supabase pgvector, Weaviate, Chroma)
+
+2. Retrieval (Online, per query)
+When a user submits a query:
+- Embed the query using the same embedding model
+- Perform similarity search against the vector database (cosine similarity or dot product)
+- Return the top-k most similar chunks as context
+
+3. Generation (Online, per query)
+The retrieved chunks are injected into the LLM prompt as context. The model generates an answer grounded in those chunks, not in its training data alone. A well-designed RAG prompt instructs the model to use only the provided context and to say "I don't know" when the context doesn't contain the answer.
+
+CHUNKING STRATEGIES
+
+Chunking is critical. Poor chunking causes retrieval failures regardless of how good the embedding model is.
+
+Fixed-size chunking: split on token count (e.g., 500 tokens, 50 token overlap). Simple and reliable. Works well for uniform text.
+
+Semantic chunking: split on sentence or paragraph boundaries. Preserves meaning within chunks. Better for structured documents.
+
+Hierarchical chunking: store both small chunks (for precise retrieval) and larger parent chunks (for context). Retrieve small, return large.
+
+Document-aware chunking: respect document structure — split on headings, sections, or logical units rather than arbitrary token counts.
+
+EMBEDDING MODELS
+
+Embeddings convert text to dense vectors where semantically similar text maps to nearby points in vector space. Quality varies significantly by model and domain.
+
+Popular models: OpenAI text-embedding-3-small, Voyage AI voyage-3 and voyage-3-lite, Cohere embed-v3, open-source BAAI/bge-m3. Voyage AI and Cohere models consistently outperform OpenAI embeddings on retrieval benchmarks.
+
+Key parameters: dimensionality (higher = more expressive, more storage), context length (how much text the model can embed at once), batch size (how many chunks to process simultaneously).
+
+VECTOR DATABASES
+
+A vector database stores embeddings and supports approximate nearest neighbor (ANN) search at scale. Options:
+- Supabase pgvector: PostgreSQL extension, managed, free tier available, good for production RAG with SQL needs
+- Pinecone: managed, fully hosted, easy to start, more expensive at scale
+- Chroma: open source, easy local development, not production-hardened
+- Weaviate: open source, production-grade, complex to operate
+- Qdrant: open source, high performance, good ANN index options
+
+For Australian startups, Supabase pgvector (hosted on AWS ap-southeast-2) is cost-effective and reduces operational overhead.
+
+NAIVE RAG VS ADVANCED RAG
+
+Naive RAG: embed query, retrieve top-k, generate. Simple but brittle. Fails on complex queries, ambiguous questions, and when relevant information is spread across multiple chunks.
+
+Advanced RAG techniques:
+- Query rewriting: use an LLM to rewrite the query before retrieval for better recall
+- HyDE (Hypothetical Document Embeddings): generate a hypothetical answer, embed it, retrieve based on that embedding
+- Re-ranking: use a cross-encoder to re-rank retrieved chunks before generation
+- Multi-query retrieval: generate multiple query variants, retrieve for each, deduplicate
+- Parent-child retrieval: retrieve small chunks, return their parent context
+
+RAG LIMITATIONS
+
+RAG fails when: the knowledge base doesn't contain the answer, chunking splits relevant context across chunks, the query is too vague for retrieval, or the LLM ignores retrieved context (hallucination). Evaluation is essential to measure these failure modes.

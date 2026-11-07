@@ -1,0 +1,71 @@
+LLMOps and Observability for Production AI Systems
+
+LLMOps (Large Language Model Operations) is the set of practices, tools, and processes for deploying, monitoring, and maintaining LLM-powered systems in production. It is the AI engineering equivalent of DevOps or MLOps, adapted for the unique challenges of generative AI.
+
+WHY LLMOPS MATTERS
+
+Production LLM systems fail in ways that are fundamentally different from traditional software. Outputs are probabilistic — the same input can produce different outputs. Failure modes are soft: hallucinations, partial answers, context window overflows, and cost overruns don't throw exceptions. Without active monitoring, issues remain invisible until users complain.
+
+LLMOps answers: Is the system working? What is it costing? Where is it slow? What changed?
+
+OBSERVABILITY: THE THREE PILLARS
+
+Logs: structured records of every request and response. For LLMs, this means logging: prompt text, retrieved context, generated response, model used, token counts (input/output), latency, cost, any errors. Store logs in a queryable system (a database or observability platform). Logs enable debugging individual failures.
+
+Traces: end-to-end records of a request's journey through the system. For a RAG pipeline, a trace captures: query received → embedding call → vector DB query → chunks retrieved → LLM prompt constructed → LLM response → answer returned. Each step gets a timestamp and duration. Traces enable latency profiling and finding bottlenecks.
+
+Metrics: aggregated statistics over time. Key metrics for LLM systems:
+- Requests per minute (throughput)
+- p50/p95/p99 latency (end-to-end and per component)
+- Error rate (failed requests / total requests)
+- Token usage (input + output tokens per request, per day)
+- Cost ($ per request, $ per day)
+- Quality scores (RAGAS faithfulness, answer relevance, from sampled eval runs)
+
+LANGSMITH
+
+LangSmith is Anthropic's observability platform for LangChain-based applications (also usable standalone). It provides automatic tracing of LangChain chains and agents, a UI for browsing traces, prompt versioning, and an evaluation framework.
+
+Key features:
+- Automatic instrumentation: wrap your chain in a LangSmith tracer and all LangChain calls are traced automatically
+- Trace viewer: see every step of a RAG pipeline with inputs, outputs, latency, and token counts
+- Evaluation hub: run RAGAS or custom evaluators against traced runs
+- Prompt versioning: store and version prompts, track which version is in production
+
+Setup: pip install langsmith; set LANGCHAIN_TRACING_V2=true and LANGCHAIN_API_KEY in environment. Free tier available for development and small projects.
+
+WEIGHTS AND BIASES (W&B)
+
+W&B is a machine learning experiment tracking platform widely used for model training and now increasingly for LLM evaluation and production monitoring.
+
+For LLMOps use cases:
+- Log eval runs: track RAGAS scores, latency, cost across experiments
+- Dashboard: visualize metric trends over time, compare experiments
+- Alerts: set thresholds and get notified when quality drops or cost spikes
+- Artifact versioning: version datasets, prompts, evaluation results
+
+Setup: pip install wandb; run wandb login; use wandb.init() and wandb.log() in your evaluation scripts. Free tier available.
+
+COST MANAGEMENT
+
+Token costs are the primary operational expense for LLM systems. Left unmanaged, they surprise teams at billing time.
+
+Token counting: use the model provider's tokenizer to count tokens before making API calls. For Gemini, use the count_tokens method. For OpenAI/Claude, use tiktoken or the anthropic tokenizer. Log input and output token counts for every request.
+
+Cost per request: (input_tokens × input_price_per_1k) + (output_tokens × output_price_per_1k). For Gemini 1.5 Flash: approximately $0.075 per 1M input tokens, $0.30 per 1M output tokens (as of 2026). This means a typical RAG query with 2000 input tokens and 300 output tokens costs roughly $0.0004 — cheap per query but significant at scale.
+
+Token budgeting: set a maximum token budget per request. If context retrieval would exceed the budget, truncate retrieved chunks or reduce k. This prevents runaway costs from unexpectedly long inputs.
+
+Caching: cache LLM responses for identical or near-identical queries. Redis or a simple in-memory dict can cache (query_hash → response) with a TTL. Reduces costs significantly for FAQ-style use cases where the same questions repeat.
+
+DEPLOYMENT PATTERNS
+
+API server: wrap your RAG chain in a FastAPI endpoint. POST /query with JSON body {question: "..."}, return JSON {answer: "...", sources: [...]}. Deploy to AWS Lambda (serverless, scales to zero) or EC2/GCP Cloud Run (always-on, predictable latency).
+
+Health checks: expose GET /health returning {"status": "ok", "version": "1.0.0"}. Load balancers and monitoring tools poll this endpoint to verify the service is alive.
+
+Graceful degradation: if the vector database is unavailable, return a fallback response ("I'm having trouble accessing my knowledge base right now") rather than crashing. If the LLM API times out, retry with exponential backoff before returning an error.
+
+ALERTING AND INCIDENT RESPONSE
+
+Set alerts on: error rate > 1%, p95 latency > 5 seconds, daily cost > $X threshold, quality score (from sampled evals) drops below baseline. Use PagerDuty, Slack webhooks, or email for alert delivery. Write a runbook: a document describing what to do when each alert fires. This turns incidents from chaos into a checklist.

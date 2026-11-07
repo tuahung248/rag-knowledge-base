@@ -1,0 +1,82 @@
+Evaluating RAG Systems: Metrics and Frameworks
+
+Evaluation is the most underdeveloped skill in RAG engineering and the biggest differentiator between prototype-quality and production-quality systems. Without rigorous evaluation, you don't know if your RAG system is actually working — or which changes improve it vs. regress it.
+
+WHY RAG EVALUATION IS HARD
+
+RAG has two distinct failure modes. Retrieval failures: the right chunks aren't returned (recall problem). Generation failures: the right chunks are returned but the LLM ignores them or hallucinates an answer anyway. These require different metrics and different fixes.
+
+Additionally, there's rarely a ground-truth label for every possible query. Building evaluation datasets requires effort, but it's essential for systematic improvement.
+
+RETRIEVAL METRICS
+
+Retrieval quality measures whether the system fetches the right documents for a given query.
+
+Precision@k: of the top k retrieved chunks, what fraction are actually relevant? High precision means few irrelevant chunks pollute the context.
+
+Recall@k: of all relevant chunks in the corpus, what fraction appear in the top k results? High recall means you're not missing important information.
+
+MRR (Mean Reciprocal Rank): measures how highly ranked the first relevant chunk is. MRR = 1 / rank_of_first_relevant_result. Averaged across queries. High MRR means the most useful chunk appears near the top.
+
+NDCG (Normalized Discounted Cumulative Gain): a graded relevance metric that rewards highly relevant chunks ranked at the top more than slightly relevant chunks. Used in information retrieval research; best for fine-grained comparison between retrieval strategies.
+
+For most RAG projects, start with Precision@k and Recall@k. They're intuitive and easy to compute with a labeled test set.
+
+GENERATION METRICS
+
+Generation metrics measure whether the LLM produced a good answer given the retrieved context.
+
+Faithfulness: does the answer contain only claims supported by the retrieved context? Measures hallucination rate. A faithful answer cites or paraphrases the context without adding fabricated information.
+
+Answer Relevance: is the answer relevant to the question? Measures whether the model stayed on topic even when context was noisy.
+
+Context Relevance: are the retrieved chunks actually relevant to the question? Bridges retrieval and generation — a low score here means the retrieval step is failing.
+
+RAGAS FRAMEWORK
+
+RAGAS (Retrieval Augmented Generation Assessment) is an open-source Python library that automates RAG evaluation using LLM-as-judge for metrics that are hard to compute programmatically. RAGAS computes:
+
+- Faithfulness: LLM checks if each claim in the answer is grounded in context
+- Answer Relevance: LLM scores how well the answer addresses the question
+- Context Precision: are relevant chunks ranked highly?
+- Context Recall: does the retrieved context contain what's needed to answer?
+- Answer Correctness: compared to a reference answer, how correct is the generated answer?
+
+RAGAS requires a dataset of (question, ground_truth_answer, retrieved_context, generated_answer) tuples. It then scores each metric per example and aggregates across the dataset.
+
+Installation: pip install ragas
+Key classes: EvaluationDataset, evaluate(), metrics.Faithfulness, metrics.AnswerRelevancy
+
+BUILDING AN EVALUATION DATASET
+
+For P0 (basic RAG), a minimum viable eval set has 20-50 question-answer pairs derived from your corpus. Steps:
+
+1. Select representative chunks from your knowledge base
+2. For each chunk, write 2-3 questions whose answers are in that chunk
+3. Write the reference answer (what a correct response should say)
+4. Store as CSV or JSON: {question, ground_truth, source_chunk}
+
+Then run your RAG system on each question, collect (retrieved_context, generated_answer), and score with RAGAS.
+
+LATENCY AND COST METRICS
+
+Production RAG must also track operational metrics alongside quality:
+
+Retrieval latency: time from query submission to context returned. Target: under 200ms for pgvector with IVFFlat index on small corpora.
+
+Generation latency: time for LLM to produce a full response. Varies by model and output length. Track p50 and p95 (95th percentile), not just average.
+
+Token cost per query: input tokens (prompt + context) + output tokens, multiplied by model pricing. For Claude claude-3-haiku or Gemini Flash, this is typically $0.001-$0.01 per query. Scale this by monthly query volume to estimate operating cost.
+
+Cost vs quality tradeoff: more retrieved chunks = more context = better quality but higher token cost and latency. Find the optimal k (number of chunks) for your use case by sweeping k=2,4,6 and measuring quality and cost.
+
+END-TO-END EVALUATION LOOP
+
+Best practice for iterative RAG improvement:
+1. Establish baseline: run current system on eval set, record all metrics
+2. Make one change (different chunk size, different k, different prompt, different model)
+3. Re-run eval set, compare metrics to baseline
+4. Accept change if it improves key metric without regressing others
+5. Repeat
+
+This is the difference between systematic engineering and guessing. Every RAG improvement should be justified by eval results, not intuition.

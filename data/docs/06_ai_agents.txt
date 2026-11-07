@@ -1,0 +1,89 @@
+AI Agents: Architecture, Patterns, and Production Considerations
+
+An AI agent is a system that uses a large language model (LLM) as a reasoning engine to autonomously plan and execute multi-step tasks. Unlike a simple prompt-response pipeline, an agent can call tools, observe results, update its plan, and iterate until it completes a goal.
+
+THE CORE AGENT LOOP
+
+The fundamental agent loop is: Observe → Think → Act → Repeat.
+
+1. Observe: the agent receives input (user request + any context)
+2. Think: the LLM reasons about what action to take next
+3. Act: the agent calls a tool (search, database query, code execution, API call)
+4. Observe: the tool result is returned to the agent
+5. Repeat: the LLM decides whether to call another tool or return a final answer
+
+This loop continues until the agent reaches a stopping condition: the task is complete, a maximum step limit is reached, or the agent explicitly signals it has finished.
+
+REACT (REASON + ACT) PATTERN
+
+ReAct is the most widely used agent pattern. The LLM alternates between Thought (internal reasoning) and Action (tool call), with Observation (tool result) fed back after each action.
+
+Format:
+Thought: I need to find the population of Sydney to answer this question.
+Action: search("Sydney population 2026")
+Observation: Sydney's population is approximately 5.3 million as of 2026.
+Thought: I now have the information needed to answer.
+Final Answer: Sydney's population is approximately 5.3 million.
+
+ReAct is well-supported by LangChain (create_react_agent), LlamaIndex (ReActAgent), and the Anthropic tool use API.
+
+TOOL USE AND FUNCTION CALLING
+
+Tools are functions the agent can call to interact with external systems. Common tools in RAG-agent systems:
+
+- retriever_tool: searches the vector database and returns relevant chunks
+- web_search: fetches current information from the internet
+- calculator: performs arithmetic (avoids LLM math errors)
+- database_query: runs SQL against a structured database
+- code_executor: runs Python code and returns output
+- api_caller: calls external REST APIs
+
+Tool definitions include: name, description (what it does, when to use it), and input schema (what arguments it accepts). The LLM uses tool descriptions to decide which tool to call. Quality of tool descriptions directly impacts agent behavior.
+
+MULTI-AGENT SYSTEMS
+
+Multi-agent systems coordinate multiple specialized agents to handle complex tasks that benefit from division of labor.
+
+Planner + Executor pattern: a planner agent decomposes a high-level task into subtasks; executor agents run each subtask. The planner receives results from executors and decides next steps. Good for tasks with clear decomposition (research + writing, data gathering + analysis).
+
+Researcher + Writer + Editor pattern: researcher agent retrieves and synthesizes information; writer agent drafts a response; editor agent critiques and refines. Good for content generation tasks where quality matters.
+
+Critic pattern: an independent critic agent evaluates the output of another agent and provides structured feedback, triggering revision loops. Improves output quality at the cost of additional token spend.
+
+Multi-agent benefits: parallelism (agents work simultaneously on independent subtasks), specialization (each agent optimized for one type of task), scalability (add agents to handle more work).
+
+Multi-agent risks: increased cost (each agent uses tokens), context loss (agents don't share memory by default), debugging complexity (tracing failures across multiple agents is harder), and latency (sequential agent calls add up).
+
+CONTEXT AND MEMORY MANAGEMENT
+
+Each agent invocation starts with a fresh context window. Agents don't have persistent memory between calls unless memory is explicitly managed.
+
+Short-term memory: the conversation history within a single agent loop. Managed by passing message history to the LLM.
+
+External memory: a vector database or key-value store the agent can query. Enables agents to retrieve relevant information from past interactions or large knowledge bases.
+
+Scratchpad: agents can write intermediate results to a scratchpad (a text buffer or file) and reference it in later steps. Prevents important information from falling out of context.
+
+Context window management: long agent loops accumulate large contexts. Strategies: summarize older history, truncate low-relevance messages, use a retrieval step to pull in relevant past context rather than keeping all history in the window.
+
+PRODUCTION AGENT CONSIDERATIONS
+
+Reliability: agents fail in ways that are hard to predict. Add maximum step limits to prevent infinite loops. Add retry logic for transient tool failures. Log every step for debugging.
+
+Cost control: unconstrained agents can run many tool calls and consume many tokens. Set per-request token budgets. Monitor cost per agent run. Alert when cost exceeds thresholds.
+
+Latency: multi-step agents are slow. A 5-step agent with 2-second LLM latency per step takes 10+ seconds. Run independent tool calls in parallel where possible. Stream intermediate results to the user to reduce perceived latency.
+
+Safety and guardrails: agents with real-world tool access (database writes, API calls, code execution) can cause irreversible harm. Implement approval steps for high-risk actions. Log all tool calls. Test thoroughly with adversarial inputs before production deployment.
+
+Observability: trace every agent step with LangSmith or a similar tool. Record: which tools were called, with what inputs, what was returned, how long each step took, total tokens used. Without traces, debugging agent failures is nearly impossible.
+
+FRAMEWORKS FOR BUILDING AGENTS
+
+LangChain: most widely adopted, large ecosystem, good documentation. Supports ReAct, OpenAI functions, tool calling. AgentExecutor and newer LangGraph are the main agent constructs.
+
+LlamaIndex: strong for RAG-heavy agents, good query engine integration. RouterQueryEngine and SubQuestionQueryEngine are useful patterns.
+
+Anthropic tool use API: Claude's native tool use is clean and reliable. Directly supported without a framework. Good choice when you want minimal abstraction and maximum control.
+
+For Australian market roles, LangChain is the most commonly requested framework in job descriptions (2026 signal). Learn LangChain first, understand the Anthropic tool use API second.

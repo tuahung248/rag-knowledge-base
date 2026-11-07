@@ -1,0 +1,57 @@
+Embeddings, Vector Search, and Similarity
+
+Embeddings are dense numerical representations of text, images, or other data. An embedding model converts input text into a fixed-length vector of floating-point numbers, typically 512 to 4096 dimensions, where semantically similar inputs produce similar vectors.
+
+WHAT EMBEDDINGS CAPTURE
+
+A good embedding model captures semantic meaning, not just surface-level keyword overlap. For example, "dog" and "canine" should have similar embeddings, as should "quarterly revenue report" and "Q3 financial results." This allows retrieval systems to find relevant documents even when the exact query words don't appear in them.
+
+Embeddings are trained on large corpora using contrastive learning objectives — the model learns to push similar text closer together and dissimilar text further apart in the vector space.
+
+HOW VECTOR SIMILARITY WORKS
+
+Given a query embedding and a database of document embeddings, retrieval involves computing similarity between the query vector and all stored vectors, then returning the top-k most similar.
+
+Cosine similarity: measures the angle between two vectors. Range: -1 to 1 (1 = identical direction). Most commonly used for text embeddings. Formula: similarity = (A · B) / (|A| |B|).
+
+Dot product: similar to cosine but sensitive to vector magnitude. Used when embeddings are normalized (then equivalent to cosine).
+
+Euclidean distance (L2): measures straight-line distance. Less common for text embeddings but used in some contexts.
+
+For most RAG systems, cosine similarity is the right choice. Libraries like FAISS (Facebook AI Similarity Search) and pgvector implement efficient ANN search using this metric.
+
+APPROXIMATE NEAREST NEIGHBOR (ANN) SEARCH
+
+Exact nearest neighbor search requires computing similarity against every vector in the database — O(n) per query. For large databases (millions of vectors), this is too slow. ANN algorithms trade a small amount of accuracy for dramatically faster search.
+
+IVFFlat (Inverted File Index with Flat Quantization): divides vectors into clusters, searches only the most relevant clusters. Supported by pgvector and FAISS. Good baseline for most RAG systems.
+
+HNSW (Hierarchical Navigable Small World): graph-based index, faster queries, higher memory usage. Supported by pgvector (use `hnsw` index type), Weaviate, Qdrant.
+
+For pgvector: use IVFFlat for datasets under 1 million vectors (simple, low memory); use HNSW for datasets over 1 million where query latency matters most.
+
+EMBEDDING MODEL SELECTION
+
+Choosing the right embedding model significantly impacts RAG quality. Key factors:
+
+Retrieval quality (NDCG, recall@k on BEIR benchmark): Voyage AI voyage-3 and Cohere embed-v3 lead open benchmarks for retrieval tasks. OpenAI text-embedding-3-small is a solid default with broad API availability.
+
+Context length: how many tokens the model can embed at once. Short context models (512 tokens) work for sentence-level chunks. Longer context models (8192+ tokens) can embed entire paragraphs or document sections.
+
+Dimensionality: higher dimensions capture more nuance but require more storage and slower search. 1024 dimensions (Voyage AI voyage-3-lite) is a good production default.
+
+Domain specificity: general-purpose models work for most use cases. For specialized domains (legal, medical, code), domain-fine-tuned models improve retrieval quality.
+
+Cost: Voyage AI offers 200M free tokens/month on their API. OpenAI charges per 1000 tokens. For high-volume production, cost compounds quickly.
+
+METADATA FILTERING
+
+Vector search alone finds semantically similar documents, but often you need to filter by metadata too — for example, "only retrieve from documents uploaded in the last 30 days" or "only retrieve from product category X."
+
+Most vector databases support metadata filtering alongside ANN search. In pgvector, this is a SQL WHERE clause. In Pinecone, it's a filter parameter in the query. In LangChain's SupabaseVectorStore, the `filter` parameter in `similarity_search` maps to a SQL condition.
+
+Best practice: store structured metadata (source file, date, category, document ID) alongside embeddings at ingest time. This enables powerful filtered retrieval without full re-indexing.
+
+EMBEDDING DRIFT AND REINDEXING
+
+Embedding models evolve. If you update the embedding model, all existing vectors become incompatible with new query embeddings (they're in different vector spaces). You must re-embed and re-index the entire corpus. Plan for this by keeping raw document storage separate from the vector index — reindexing then becomes a background batch job rather than a data loss event.

@@ -1,0 +1,50 @@
+Prompt Engineering: Concepts and Best Practices
+
+Prompt engineering is the practice of designing and refining inputs to AI language models to produce accurate, relevant, and useful outputs. It is a core skill for AI engineers working with large language models (LLMs) in production systems.
+
+WHAT IS PROMPT ENGINEERING
+
+A prompt is the text input sent to an LLM. Prompt engineering involves crafting these inputs carefully so the model produces the desired output. Rather than relying on the model to infer intent from vague instructions, effective prompt engineering communicates precisely what is needed.
+
+Think of an LLM as a highly capable assistant who is unfamiliar with your specific context, norms, and workflows. The more precisely you communicate your requirements, the better the results.
+
+CORE TECHNIQUES
+
+Be Clear and Direct
+Claude and other LLMs respond best to explicit, specific instructions. Vague prompts produce vague outputs. If you need the model to format output in a specific way, say so explicitly. If you need it to follow a sequence of steps, number them clearly.
+
+Less effective: "Analyze this text."
+More effective: "Analyze the sentiment of this customer review. Return one of: positive, neutral, or negative. Then explain your reasoning in two sentences."
+
+Use Examples (Few-Shot Prompting)
+Providing examples of desired input-output pairs is one of the most reliable ways to steer model behavior. Known as few-shot prompting, this technique improves accuracy, consistency, and output format adherence. Include 3-5 examples that cover edge cases and vary in content to avoid unintended patterns.
+
+Add Context and Motivation
+Explaining why an instruction matters helps models generalize better. Instead of "Never use ellipses," try "Never use ellipses because the output will be read by a text-to-speech engine that cannot pronounce them correctly." The model can apply this reasoning to similar edge cases.
+
+Structure Prompts with XML Tags
+For complex prompts that mix instructions, context, examples, and variable inputs, XML tags help the model parse content unambiguously. Use tags like <instructions>, <context>, <examples>, and <input> to separate content types. This reduces misinterpretation and improves reliability.
+
+Role Prompting
+Setting a specific role in the system prompt focuses model behavior. Example: "You are a senior AI engineer specializing in production RAG systems." This shapes tone, vocabulary, and the type of reasoning the model applies.
+
+Chain-of-Thought Prompting
+For complex reasoning tasks, ask the model to think step by step before giving its final answer. This technique, known as chain-of-thought (CoT) prompting, improves accuracy on multi-step problems like math, logic, and planning tasks.
+
+PROMPT ENGINEERING VS CONTEXT ENGINEERING
+
+Context engineering is the natural evolution of prompt engineering. Rather than optimizing a single instruction, context engineering involves deciding what information should occupy the model's context window at each step of a conversation or agent loop. This includes retrieved documents (RAG), conversation history, tool results, and system instructions. As systems scale, context management becomes more important than individual prompt wording.
+
+WHEN TO USE PROMPT ENGINEERING
+
+Prompt engineering is the right tool when: output quality is inconsistent, the model misunderstands the task, format or tone is off, or the model is not grounded in provided context. It is not always the solution — sometimes choosing a different model, adding retrieval (RAG), or fine-tuning is more appropriate.
+
+EVALUATION AND ITERATION
+
+Prompt engineering is empirical. Define success criteria before you start, build a test set of representative inputs and expected outputs, and measure prompt changes against that test set. Iterate systematically, changing one variable at a time to understand what actually improves performance.
+
+Common metrics: accuracy on labeled examples, format adherence rate, latency, token cost per query.
+
+PRODUCTION PROMPT MANAGEMENT
+
+In production, prompts are versioned artifacts, not throwaway text. Use a prompt management system (LangSmith, Weights and Biases, or a simple version-controlled config file) to track prompt versions, evaluation results, and rollout decisions. Treat prompt changes like code changes: test before deploying, monitor after deploying, roll back if metrics degrade.
