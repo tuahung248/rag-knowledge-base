@@ -65,11 +65,15 @@ if __name__ == "__main__":
         print("-" * 60)
 
 
-def ask_with_sources(question: str, k: int = 4):
-    """Return (answer, source_docs) for a given question."""
+def ask_with_sources(question: str, k: int = 4, gemini_api_key: str | None = None):
+    """Return (answer, source_docs) for a given question.
+
+    gemini_api_key: caller's own Gemini key (e.g. entered in the UI).
+    Falls back to the GEMINI_API_KEY env var when not provided.
+    """
     llm = ChatGoogleGenerativeAI(
         model="gemini-3.5-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+        google_api_key=gemini_api_key or os.getenv("GEMINI_API_KEY"),
         temperature=0.1
     )
     retriever = get_retriever(k=k)
