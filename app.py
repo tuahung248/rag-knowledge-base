@@ -87,9 +87,19 @@ with col2:
     st.empty()
 
 # --- Answer ---
+MAX_QUESTIONS_PER_SESSION = 5
+asked = st.session_state.get("questions_asked", 0)
+st.caption(f"Questions left this session: {max(MAX_QUESTIONS_PER_SESSION - asked, 0)}")
+
 if submit and not user_gemini_key.strip():
     st.warning("Enter your Gemini API key above to ask a question. Free at aistudio.google.com.")
+elif submit and question.strip() and asked >= MAX_QUESTIONS_PER_SESSION:
+    st.warning(
+        f"You've used all {MAX_QUESTIONS_PER_SESSION} questions for this session. "
+        "Refresh the page to start a new one."
+    )
 elif submit and question.strip():
+    st.session_state["questions_asked"] = asked + 1
     with st.spinner("Retrieving and generating..."):
         try:
             answer, source_docs = ask_with_sources(
