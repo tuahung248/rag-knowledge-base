@@ -106,25 +106,6 @@ The app opens straight to the sample questions in the sidebar. To ask a question
 > [!NOTE]
 > Each browser session gets 5 questions. The count resets when the page is refreshed. Keys are sent to Gemini for each request and are not stored.
 
-## Deploy to Streamlit Community Cloud
-
-1. Push the repo to GitHub.
-2. In [Streamlit Community Cloud](https://share.streamlit.io), create an app from the repo with main file `app.py`.
-3. Under **Advanced settings → Secrets**, add:
-
-   ```toml
-   VOYAGE_API_KEY = "..."
-   SUPABASE_URL = "https://xxxx.supabase.co"
-   SUPABASE_SERVICE_KEY = "..."
-   ```
-
-   `GEMINI_API_KEY` is not needed here, since visitors supply their own.
-
-The app copies these secrets into the environment at startup, so the same code runs locally from `.env` and on Streamlit Cloud from secrets.
-
-> [!WARNING]
-> Visitors' questions use your Voyage AI key for embeddings. The 5-question session limit caps usage per session, but it does not stop repeated sessions. Monitor your Voyage usage.
-
 ## Project structure
 
 ```
