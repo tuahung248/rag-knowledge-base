@@ -57,12 +57,14 @@ streamlit run app.py   # open the UI at http://localhost:8501
 
 Copy `.env.example` to `.env` and set:
 
-| Variable | Description |
-| --- | --- |
-| `GEMINI_API_KEY` | Google AI Studio key for Gemini |
-| `VOYAGE_API_KEY` | Voyage AI key for embeddings |
-| `SUPABASE_URL` | Your project URL |
-| `SUPABASE_SERVICE_KEY` | Service role key, used server-side only |
+| Variable | Used by | Description |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | CLI (`src/rag_chain.py`) | Google AI Studio key for Gemini |
+| `VOYAGE_API_KEY` | Ingestion, retrieval | Voyage AI key for embeddings |
+| `SUPABASE_URL` | Ingestion, retrieval | Your project URL |
+| `SUPABASE_SERVICE_KEY` | Ingestion, retrieval | Service role key, used server-side only |
+
+In the web app, each visitor enters their own Gemini key in the question area. The app does not store it.
 
 > [!WARNING]
 > The service role key bypasses Row Level Security. Keep it in `.env` and never ship it to browser code. `.env` is gitignored.
@@ -94,8 +96,29 @@ Runs the sample questions in `src/rag_chain.py` and prints each answer.
 streamlit run app.py
 ```
 
-> [!TIP]
-> Click a sample question in the sidebar to fill the input, then press **Ask**. Expand **Sources** under an answer to see the retrieved chunks.
+The app opens straight to the sample questions in the sidebar. To ask a question, enter a Gemini API key in the question area, then press **Ask**. Expand **Sources** under an answer to see the retrieved chunks.
+
+> [!NOTE]
+> Each browser session gets 5 questions. The count resets when the page is refreshed. Keys are sent to Gemini for each request and are not stored.
+
+## Deploy to Streamlit Community Cloud
+
+1. Push the repo to GitHub.
+2. In [Streamlit Community Cloud](https://share.streamlit.io), create an app from the repo with main file `app.py`.
+3. Under **Advanced settings → Secrets**, add:
+
+   ```toml
+   VOYAGE_API_KEY = "..."
+   SUPABASE_URL = "https://xxxx.supabase.co"
+   SUPABASE_SERVICE_KEY = "..."
+   ```
+
+   `GEMINI_API_KEY` is not needed here, since visitors supply their own.
+
+The app copies these secrets into the environment at startup, so the same code runs locally from `.env` and on Streamlit Cloud from secrets.
+
+> [!WARNING]
+> Visitors' questions use your Voyage AI key for embeddings. The 5-question session limit caps usage per session, but it does not stop repeated sessions. Monitor your Voyage usage.
 
 ## Project structure
 
