@@ -1,5 +1,6 @@
 # app.py — Streamlit UI for AI Engineering Knowledge Base RAG
 
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -9,6 +10,15 @@ from dotenv import load_dotenv
 from src.rag_chain import ask_with_sources
 
 load_dotenv()
+
+# Streamlit Community Cloud exposes secrets via st.secrets; copy them into
+# the environment so the rest of the code can use os.getenv everywhere.
+try:
+    for _key, _value in st.secrets.items():
+        if isinstance(_value, str):
+            os.environ.setdefault(_key, _value)
+except Exception:
+    pass  # no secrets file locally; .env is used instead
 
 # --- Page config ---
 st.set_page_config(
